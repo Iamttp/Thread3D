@@ -3,7 +3,7 @@
 #include <vector>
 #include "mul.h"
 
-static float angle = 0.0, myratio;  // angle绕y轴的旋转角，ratio窗口高宽比
+static float myratio;  // angle绕y轴的旋转角，ratio窗口高宽比
 static float x = 0.0f, y = 0.0f, z = 5.0f;  //相机位置
 static float lx = 0.0f, ly = 0.0f, lz = -1.0f;  //视线方向，初始设为沿着Z轴负方向
 
@@ -19,6 +19,8 @@ const int width = 200;
 const int height = 200;
 
 int index; // 显示列表
+std::vector<std::thread *> vt;
+std::vector<float> vSpeed{500, 1210, 2500, 2120, 2320};
 
 // 为了显示好看，尽量奇数
 ItemRepository gItemRepository1(1, 9), gItemRepository2(2, 5), gItemRepository3(3, 5);
@@ -114,10 +116,47 @@ void processSpecialKeys(int key, int x, int y) {
 
 void processNormalKeys(unsigned char key, int x, int y) {
     switch (key) {
-        // TODO add
+        case 'q':
+            vSpeed[0] *= 0.9;
+            break;
+        case 'w':
+            vSpeed[1] *= 0.9;
+            break;
+        case 'e':
+            vSpeed[2] *= 0.9;
+            break;
+        case 'r':
+            vSpeed[3] *= 0.9;
+            break;
+        case 't':
+            vSpeed[4] *= 0.9;
+            break;
+
+        case 'a':
+            vSpeed[0] *= 1.1;
+            break;
+        case 's':
+            vSpeed[1] *= 1.1;
+            break;
+        case 'd':
+            vSpeed[2] *= 1.1;
+            break;
+        case 'f':
+            vSpeed[3] *= 1.1;
+            break;
+        case 'g':
+            vSpeed[4] *= 1.1;
+            break;
         default:
             break;
     }
+
+    char str[80];
+    sprintf(str, "Now Speed:\n\tPut:%.2f\n\tMove1:%.2f\n\tMove2:%.2f\n\tGet1:%.2f\n\tGet2:%.2f\n\n",
+            1000.0f / vSpeed[0], 1000.0f / vSpeed[1], 1000.0f / vSpeed[2], 1000.0f / vSpeed[3], 1000.0f / vSpeed[4]);
+//    TextOut(10, 10, str);
+    system("cls");
+    cout << str;
 }
 
 struct col {
@@ -157,6 +196,10 @@ void drawArrow() {
 }
 
 void myDisplay() {
+    std::unique_lock<std::mutex> lock1(gItemRepository1.mtx);
+    std::unique_lock<std::mutex> lock2(gItemRepository2.mtx);
+    std::unique_lock<std::mutex> lock3(gItemRepository3.mtx);
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
     gluLookAt(x, y, z, x + lx, y + ly, z + lz, 0.0f, 1.0f, 0.0f);
@@ -177,7 +220,8 @@ void myDisplay() {
             else glTranslatef(zoom * 5, -6 * zoom, 0);
             glColor3f(0, 0, 1);
         } else { // c
-            glTranslatef(zoom * 15, 0, 0);
+            if (n->ir->index == 2) glTranslatef(zoom * 15, 6 * zoom, 0);
+            else glTranslatef(zoom * 15, -6 * zoom, 0);
             glColor3f(1, 0, 0);
         }
         drawArrow();
@@ -208,32 +252,16 @@ void myDisplay() {
     glPopMatrix();
     glFlush();
     glutSwapBuffers();
-}
 
-// !!! 不可有opengl函数
-//std::string exec(const char *str, int len) {
-//    if (str[0] == 'p') {
-//
-//    }
-//    return "";
-//}
-//
-//void myScript() {
-//    while (true) {
-//        std::cout << ">>> ";
-//        char str[100];
-//        std::cin.getline(str, 100);
-//        std::cout << exec(str, strlen(str)) << std::endl;
-//    }
-//}
+    lock1.unlock(); // 解锁.
+    lock2.unlock(); // 解锁.
+    lock3.unlock(); // 解锁.
+}
 
 // 有动作再调用
 void myIdle() {
     if (!mesQ.empty()) myDisplay();
 }
-
-std::vector<std::thread *> vt;
-int rat = 3;
 
 void init() {
     glEnable(GL_DEPTH_TEST);
@@ -272,15 +300,12 @@ void init() {
     glRectf(-width * zoom, -height * zoom, width * zoom, height * zoom);
     glEndList();
 
-//    std::thread t(myScript);
-//    t.detach();
-
     // 任务
-    vt.push_back(new std::thread(putTask, &gItemRepository1, 100 * rat));
-    vt.push_back(new std::thread(moveTask, &gItemRepository1, &gItemRepository2, 243 * rat));
-    vt.push_back(new std::thread(moveTask, &gItemRepository1, &gItemRepository3, 197 * rat));
-    vt.push_back(new std::thread(getTask, &gItemRepository2, 343 * rat));
-    vt.push_back(new std::thread(getTask, &gItemRepository3, 277 * rat));
+    vt.push_back(new std::thread(putTask, &gItemRepository1, &vSpeed[0]));
+    vt.push_back(new std::thread(moveTask, &gItemRepository1, &gItemRepository2, &vSpeed[1]));
+    vt.push_back(new std::thread(moveTask, &gItemRepository1, &gItemRepository3, &vSpeed[2]));
+    vt.push_back(new std::thread(getTask, &gItemRepository2, &vSpeed[3]));
+    vt.push_back(new std::thread(getTask, &gItemRepository3, &vSpeed[4]));
     for (auto &item:vt) item->detach();
 
     myDisplay();

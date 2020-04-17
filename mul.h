@@ -24,7 +24,7 @@ struct ItemRepository {
 
 struct node {
     ItemRepository *ir;
-    ItemRepository *ir2;
+    ItemRepository *ir2{};
     int action; // 1 p 2 m 3 c
 
     node(ItemRepository *ir, ItemRepository *ir2, int action) : ir(ir), ir2(ir2), action(action) {}
@@ -32,72 +32,67 @@ struct node {
     node(ItemRepository *ir, int action) : ir(ir), action(action) {}
 };
 
-threadsafe_queue<node> mesQ;
+threadsafe_queue<node> mesQ; // 消息队列
 
 
 void ProduceItem(ItemRepository *ir, int item) {
     while (ir->counter == ir->BUFFER_SIZE); // 等待
-    std::unique_lock<std::mutex> lock(ir->mtx);
+    std::lock_guard<std::mutex> lock(ir->mtx);
     ir->buffer[ir->in] = item;
     ir->in = (ir->in + 1) % ir->BUFFER_SIZE;
     ir->counter++;
+
     node n(ir, 1);
-    int x = 10;
-    while(x--) mesQ.push(n);
-    lock.unlock(); // 解锁.
+    int x = 1;
+    while (x--) mesQ.push(n);
 }
 
 int ConsumeItem(ItemRepository *ir) {
     while (ir->counter == 0); // 等待
-    std::unique_lock<std::mutex> lock(ir->mtx);
+    std::lock_guard<std::mutex> lock(ir->mtx);
+    if (ir->counter == 0) return -1; // 多个consumeItem 解决方法
     int item = ir->buffer[ir->out];
     ir->out = (ir->out + 1) % ir->BUFFER_SIZE;
     ir->counter--;
+
     node n(ir, 3);
-    int x = 10;
-    while(x--) mesQ.push(n);
-    lock.unlock(); // 解锁.
+    int x = 1;
+    while (x--) mesQ.push(n);
     return item; // 返回产品.
 }
 
 void MoveItem(ItemRepository *in, ItemRepository *out) {
-    while (in->counter == 0 || out->counter == out->BUFFER_SIZE); // 等待
-    std::unique_lock<std::mutex> lockIn(in->mtx);
-    std::unique_lock<std::mutex> lockOut(out->mtx);
-    int item = in->buffer[in->out];
-    in->out = (in->out + 1) % in->BUFFER_SIZE;
-    in->counter--;
+//    while (in->counter <= 1);
+    int item = ConsumeItem(in);
+    if (item == -1) return;
+    ProduceItem(out, item);
 
-    out->buffer[out->in] = item;
-    out->in = (out->in + 1) % out->BUFFER_SIZE;
-    out->counter++;
     node n(in, out, 2);
-    int x = 10;
-    while(x--) mesQ.push(n);
-    lockIn.unlock(); // 解锁.
-    lockOut.unlock(); // 解锁.
+    int x = 1;
+    while (x--) mesQ.push(n);
 }
 
-static const int kItemsToProduce = 1000;   // How many items we plan to produce.
-void putTask(ItemRepository *gItemRepository, int idle) {
-    for (int i = 1; i <= kItemsToProduce; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(idle));
-        ProduceItem(gItemRepository, i); // 循环生产 kItemsToProduce 个产品.
-    }
-}
-
-void getTask(ItemRepository *gItemRepository, int idle) {
-    static int cnt = 0;
+void putTask(ItemRepository *gItemRepository, const float *idle) {
+    static int i;
     while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(idle));
-        ConsumeItem(gItemRepository); // 消费一个产品.
-        if (++cnt == kItemsToProduce) break; // 如果产品消费个数为 kItemsToProduce, 则退出.
+        int idlei = *idle;
+        std::this_thread::sleep_for(std::chrono::milliseconds(idlei));
+        ProduceItem(gItemRepository, i++); // 循环生产 kItemsToProduce 个产品.
     }
 }
 
-void moveTask(ItemRepository *inRepository, ItemRepository *outRepository, int idle) {
+void getTask(ItemRepository *gItemRepository, const float *idle) {
+    while (true) {
+        int idlei = *idle;
+        std::this_thread::sleep_for(std::chrono::milliseconds(idlei));
+        ConsumeItem(gItemRepository); // 消费一个产品.
+    }
+}
+
+void moveTask(ItemRepository *inRepository, ItemRepository *outRepository, const float *idle) {
     while (true) { // just move it
-        std::this_thread::sleep_for(std::chrono::milliseconds(idle));
+        int idlei = *idle;
+        std::this_thread::sleep_for(std::chrono::milliseconds(idlei));
         MoveItem(inRepository, outRepository); // 消费一个产品.
     }
 }
