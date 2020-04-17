@@ -20,7 +20,9 @@ const int width = 200;
 const int height = 200;
 
 int index; // 显示列表
-ItemRepository gItemRepository1;
+
+// 为了显示好看，尽量奇数
+ItemRepository gItemRepository1(9), gItemRepository2(5), gItemRepository3(5);
 
 /**
  * 定义观察方式
@@ -149,7 +151,6 @@ void draw(ItemRepository *ir, int colIndex) {
     glPopMatrix();
 }
 
-
 void myDisplay() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
@@ -159,10 +160,28 @@ void myDisplay() {
     glRotatef(xrot, 1.0f, 0.0f, 0.0f);
     glRotatef(yrot, 0.0f, 1.0f, 0.0f);
 
+    // Buff1
+    glPushMatrix();
+    glTranslatef(-10 * zoom, 0, 0);
     draw(&gItemRepository1, 50);
+    glPopMatrix();
+
+    // Buff2
+    glPushMatrix();
+    glTranslatef(10 * zoom, 6 * zoom, 0);
+    draw(&gItemRepository2, 30);
+    glPopMatrix();
+
+    // Buff3
+    glPushMatrix();
+    glTranslatef(10 * zoom, -6 * zoom, 0);
+    draw(&gItemRepository3, 10);
+    glPopMatrix();
 
     // 最先画坐标
+    glPushMatrix();
     glCallList(index);
+    glPopMatrix();
     glFlush();
     glutSwapBuffers();
 }
@@ -190,6 +209,8 @@ void myDisplay() {
 void myIdle() {
     myDisplay();
 }
+
+std::vector<std::thread *> vt;
 
 void init() {
     glEnable(GL_DEPTH_TEST);
@@ -248,13 +269,23 @@ void init() {
 
 //    std::thread t(myScript);
 //    t.detach();
+
     // 任务
-    std::thread producer(ProducerTask, &gItemRepository1, 100); // 创建生产者线程.
-    std::thread consumer(ConsumerTask, &gItemRepository1, 200); // 创建消费之线程.
-    std::thread consumer2(ConsumerTask, &gItemRepository1, 300); // 创建消费之线程.
-    producer.detach();
-    consumer.detach();
-    consumer2.detach();
+    vt.push_back(new std::thread(putTask, &gItemRepository1, 490));
+//    vt.push_back(new std::thread(putTask, &gItemRepository1, 1000));
+//    vt.push_back(new std::thread(putTask, &gItemRepository1, 1000));
+
+    vt.push_back(new std::thread(moveTask, &gItemRepository1, &gItemRepository2, 1000));
+    vt.push_back(new std::thread(moveTask, &gItemRepository1, &gItemRepository3, 1000));
+
+    vt.push_back(new std::thread(getTask, &gItemRepository2, 2000));
+//    vt.push_back(new std::thread(getTask, &gItemRepository2, 1000));
+//    vt.push_back(new std::thread(getTask, &gItemRepository2, 1000));
+
+    vt.push_back(new std::thread(getTask, &gItemRepository3, 2000));
+//    vt.push_back(new std::thread(getTask, &gItemRepository3, 1000));
+//    vt.push_back(new std::thread(getTask, &gItemRepository3, 1000));
+    for (auto &item:vt) item->detach();
 }
 
 int main(int argc, char *argv[]) {
