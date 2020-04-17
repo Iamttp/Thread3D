@@ -1,10 +1,9 @@
 #include <GL/glut.h>
-#include <iostream>
 #include <thread>
 #include <vector>
 #include "mul.h"
 
-static float angle = 0.0, ratio;  // angle绕y轴的旋转角，ratio窗口高宽比
+static float angle = 0.0, myratio;  // angle绕y轴的旋转角，ratio窗口高宽比
 static float x = 0.0f, y = 0.0f, z = 5.0f;  //相机位置
 static float lx = 0.0f, ly = 0.0f, lz = -1.0f;  //视线方向，初始设为沿着Z轴负方向
 
@@ -22,7 +21,7 @@ const int height = 200;
 int index; // 显示列表
 
 // 为了显示好看，尽量奇数
-ItemRepository gItemRepository1(9), gItemRepository2(5), gItemRepository3(5);
+ItemRepository gItemRepository1(1, 9), gItemRepository2(2, 5), gItemRepository3(3, 5);
 
 /**
  * 定义观察方式
@@ -30,13 +29,13 @@ ItemRepository gItemRepository1(9), gItemRepository2(5), gItemRepository3(5);
 void changeSize(int w, int h) {
     //除以0的情况
     if (h == 0) h = 1;
-    ratio = 1.0f * w / h;
+    myratio = 1.0f * w / h;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     //设置视口为整个窗口大小
     glViewport(0, 0, w, h);
     //设置可视空间
-    gluPerspective(45, ratio, 1, 1000);
+    gluPerspective(45, myratio, 1, 1000);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -151,6 +150,12 @@ void draw(ItemRepository *ir, int colIndex) {
     glPopMatrix();
 }
 
+void drawArrow() {
+    glTranslatef(0, 0, zoom);
+    glRotatef(90, 0.0f, 1.0f, 0.0f);
+    glutSolidCone(zoom, zoom * 2, 100, 100);
+}
+
 void myDisplay() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
@@ -159,6 +164,25 @@ void myDisplay() {
     // 实现鼠标旋转的核心
     glRotatef(xrot, 1.0f, 0.0f, 0.0f);
     glRotatef(yrot, 0.0f, 1.0f, 0.0f);
+
+    // 消息队列处理
+    glPushMatrix();
+    if (!mesQ.empty()) {
+        std::shared_ptr<node> n = mesQ.wait_and_pop();
+        if (n->action == 1) { // p
+            glTranslatef(-zoom * 15, 0, 0);
+            glColor3f(0, 1, 1);
+        } else if (n->action == 2) { // m
+            if (n->ir2->index == 2) glTranslatef(zoom * 5, 6 * zoom, 0);
+            else glTranslatef(zoom * 5, -6 * zoom, 0);
+            glColor3f(0, 0, 1);
+        } else { // c
+            glTranslatef(zoom * 15, 0, 0);
+            glColor3f(1, 0, 0);
+        }
+        drawArrow();
+    }
+    glPopMatrix();
 
     // Buff1
     glPushMatrix();
@@ -203,14 +227,13 @@ void myDisplay() {
 //    }
 //}
 
-/**
- * 计时增加角度
- */
+// 有动作再调用
 void myIdle() {
-    myDisplay();
+    if (!mesQ.empty()) myDisplay();
 }
 
 std::vector<std::thread *> vt;
+int rat = 3;
 
 void init() {
     glEnable(GL_DEPTH_TEST);
@@ -219,46 +242,28 @@ void init() {
     // 显示列表
     index = glGenLists(1);//glGenLists()唯一的标识一个显示列表
     glNewList(index, GL_COMPILE);//用于对显示列表进行定界。第一个参数是一个整形索引值，由glGenLists()指定
-    // 然后坐标系
-    glLineWidth(5);
-    glEnable(GL_LINE_SMOOTH);
-    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-
-    glPushMatrix();
-    glColor4f(1, 0, 0, 0);
-    glBegin(GL_LINES);
-    glVertex3f(-width * zoom, 0, 0);
-    glVertex3f(width * zoom, 0, 0);
-    glEnd();
-
-    glPushMatrix();
-    glColor4f(1, 0, 0, 0);
-    glBegin(GL_LINES);
-    glVertex3f(0, -height * zoom, 0);
-    glVertex3f(0, height * zoom, 0);
-    glEnd();
 
     // 再画线
     glPushMatrix();
     glTranslatef(-width * zoom, 0, 0);
     glColor4f(0, 1, 0, 0);
-    for (int i = 0; i < 2 * width; i++) {
+    for (int i = 0; i < 2 * width; i += 4) {
         glBegin(GL_LINES);
         glVertex3f(0, -height * zoom, 0);
         glVertex3f(0, height * zoom, 0);
         glEnd();
-        glTranslatef(zoom, 0, 0);
+        glTranslatef(zoom * 4, 0, 0);
     }
     glPopMatrix();
 
     glPushMatrix();
     glTranslatef(0, -height * zoom, 0);
-    for (int i = 0; i < 2 * height; i++) {
+    for (int i = 0; i < 2 * height; i += 4) {
         glBegin(GL_LINES);
         glVertex3f(-width * zoom, 0, 0);
         glVertex3f(width * zoom, 0, 0);
         glEnd();
-        glTranslatef(0, zoom, 0);
+        glTranslatef(0, zoom * 4, 0);
     }
     glPopMatrix();
 
@@ -271,21 +276,14 @@ void init() {
 //    t.detach();
 
     // 任务
-    vt.push_back(new std::thread(putTask, &gItemRepository1, 490));
-//    vt.push_back(new std::thread(putTask, &gItemRepository1, 1000));
-//    vt.push_back(new std::thread(putTask, &gItemRepository1, 1000));
-
-    vt.push_back(new std::thread(moveTask, &gItemRepository1, &gItemRepository2, 1000));
-    vt.push_back(new std::thread(moveTask, &gItemRepository1, &gItemRepository3, 1000));
-
-    vt.push_back(new std::thread(getTask, &gItemRepository2, 2000));
-//    vt.push_back(new std::thread(getTask, &gItemRepository2, 1000));
-//    vt.push_back(new std::thread(getTask, &gItemRepository2, 1000));
-
-    vt.push_back(new std::thread(getTask, &gItemRepository3, 2000));
-//    vt.push_back(new std::thread(getTask, &gItemRepository3, 1000));
-//    vt.push_back(new std::thread(getTask, &gItemRepository3, 1000));
+    vt.push_back(new std::thread(putTask, &gItemRepository1, 100 * rat));
+    vt.push_back(new std::thread(moveTask, &gItemRepository1, &gItemRepository2, 243 * rat));
+    vt.push_back(new std::thread(moveTask, &gItemRepository1, &gItemRepository3, 197 * rat));
+    vt.push_back(new std::thread(getTask, &gItemRepository2, 343 * rat));
+    vt.push_back(new std::thread(getTask, &gItemRepository3, 277 * rat));
     for (auto &item:vt) item->detach();
+
+    myDisplay();
 }
 
 int main(int argc, char *argv[]) {
