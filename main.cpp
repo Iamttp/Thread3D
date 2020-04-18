@@ -1,6 +1,7 @@
 #include <GL/glut.h>
 #include <thread>
 #include <vector>
+#include <ctime>
 #include "mul.h"
 
 static float myratio;  // angle绕y轴的旋转角，ratio窗口高宽比
@@ -22,8 +23,30 @@ int index; // 显示列表
 std::vector<std::thread *> vt;
 std::vector<float> vSpeed{500, 1210, 2500, 2120, 2920};
 
+bool colorflag;
+
+struct bufferObj {
+    ItemRepository *ir;
+    float x, y, z;
+    float r{}, g{}, b{};
+
+    bufferObj(ItemRepository *ir, float x, float y, float z) : ir(ir), x(x), y(y), z(z) {
+        if (!colorflag) srand((unsigned int) time(0)), colorflag = true;
+        r = rand() % 10 / 10.0;
+        g = rand() % 10 / 10.0;
+        b = rand() % 10 / 10.0;
+    }
+
+    bufferObj(ItemRepository *ir, float x, float y, float z, float r, float g, float b)
+            : ir(ir), x(x), y(y), z(z), r(r), g(g), b(b) {}
+};
+
 // 为了显示好看，尽量奇数
-ItemRepository gItemRepository1(1, 9), gItemRepository2(2, 5), gItemRepository3(3, 5);
+std::vector<bufferObj *> ghd{
+        new bufferObj(new ItemRepository(1, 9), -10 * zoom, 0, 0),
+        new bufferObj(new ItemRepository(2, 5), 10 * zoom, 6 * zoom, 0),
+        new bufferObj(new ItemRepository(3, 5), 10 * zoom, -6 * zoom, 0),
+};
 
 /**
  * 定义观察方式
@@ -173,26 +196,6 @@ void drawArrow() {
     glutSolidCone(zoom, zoom * 2, 100, 100);
 }
 
-//void display(std::shared_ptr<node> n) {
-//    glTranslatef(0, (n->ob->rei - int(n->ir->BUFFER_SIZE) / 2) * zoom * 2, 0);
-//    if (n->action == 1) { // p
-//        glTranslatef(-zoom * 15, 0, 0);
-//        glColor3f(0, 1, 1);
-//    } else if (n->action == 2) { // m
-//        if (n->ir2->index == 2) glTranslatef(zoom * 5, 6 * zoom, 0);
-//        else glTranslatef(zoom * 5, -6 * zoom, 0);
-//        glColor3f(0, 0, 1);
-//    } else { // c
-//        if (n->ir->index == 2) glTranslatef(zoom * 15, 6 * zoom, 0);
-//        else glTranslatef(zoom * 15, -6 * zoom, 0);
-//        glColor3f(1, 0, 0);
-//    }
-//    drawArrow();
-//}
-
-std::shared_ptr<node> n;
-int coun;
-
 void myDisplay() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
@@ -202,76 +205,25 @@ void myDisplay() {
     glRotatef(xrot, 1.0f, 0.0f, 0.0f);
     glRotatef(yrot, 0.0f, 1.0f, 0.0f);
 
-//    if (!mesQ.empty()) {
-//        n = mesQ.wait_and_pop();
-//        coun = 10;
-//    }
-//
-//    // 消息队列处理
-//    glPushMatrix();
-//    if (coun) {
-//        display(n);
-//        coun--;
-//    }
-//    glPopMatrix();
-
     // 绘制球
-    glPushMatrix();
-    glTranslatef(-10 * zoom, 0, 0);
-    for (int i = 0; i < gItemRepository1.BUFFER_SIZE; i++) {
-        object *ob = gItemRepository1.buffer[i];
-        if (ob) drawSphere(&gItemRepository1, gItemRepository1.buffer[i], ob->rei);
+    for (auto &item:ghd) {
+        glPushMatrix();
+        glTranslatef(item->x, item->y, item->z);
+        for (int i = 0; i < item->ir->BUFFER_SIZE; i++) {
+            object *ob = item->ir->buffer[i];
+            if (ob) drawSphere(item->ir, item->ir->buffer[i], ob->rei);
+        }
+
+        glColor3f(item->r, item->g, item->b);
+        glPushMatrix();
+        glTranslatef(-5 * zoom, (int(item->ir->in) - int(item->ir->BUFFER_SIZE) / 2) * zoom * 2, 0);
+        drawArrow();
+        glColor3f(item->r * 0.5, item->g * 0.5, item->b * 0.5);
+        glPopMatrix();
+        glTranslatef(5 * zoom, (int(item->ir->out) - int(item->ir->BUFFER_SIZE) / 2) * zoom * 2, 0);
+        drawArrow();
+        glPopMatrix();
     }
-
-    glColor3f(0, 0, 1);
-    glPushMatrix();
-    glTranslatef(-5 * zoom,
-                 (int(gItemRepository1.in) - int(gItemRepository1.BUFFER_SIZE) / 2) * zoom * 2, 0);
-    drawArrow();
-    glColor3f(0, 0, 0.5);
-    glPopMatrix();
-    glTranslatef(5 * zoom,
-                 (int(gItemRepository1.out) - int(gItemRepository1.BUFFER_SIZE) / 2) * zoom * 2, 0);
-    drawArrow();
-    glPopMatrix();
-
-    glPushMatrix();
-    glTranslatef(10 * zoom, 6 * zoom, 0);
-    for (int i = 0; i < gItemRepository2.BUFFER_SIZE; i++) {
-        object *ob = gItemRepository2.buffer[i];
-        if (ob) drawSphere(&gItemRepository2, gItemRepository2.buffer[i], ob->rei);
-    }
-
-    glColor3f(0, 1, 1);
-    glPushMatrix();
-    glTranslatef(-5 * zoom,
-                 (int(gItemRepository2.in) - int(gItemRepository2.BUFFER_SIZE) / 2) * zoom * 2, 0);
-    drawArrow();
-    glPopMatrix();
-    glColor3f(0, 0.5, 0.5);
-    glTranslatef(5 * zoom,
-                 (int(gItemRepository2.out) - int(gItemRepository2.BUFFER_SIZE) / 2) * zoom * 2, 0);
-    drawArrow();
-    glPopMatrix();
-
-    glPushMatrix();
-    glTranslatef(10 * zoom, -6 * zoom, 0);
-    for (int i = 0; i < gItemRepository3.BUFFER_SIZE; i++) {
-        object *ob = gItemRepository3.buffer[i];
-        if (ob) drawSphere(&gItemRepository3, gItemRepository3.buffer[i], ob->rei);
-    }
-
-    glColor3f(1, 0, 1);
-    glPushMatrix();
-    glTranslatef(-5 * zoom,
-                 (int(gItemRepository3.in) - int(gItemRepository3.BUFFER_SIZE) / 2) * zoom * 2, 0);
-    drawArrow();
-    glPopMatrix();
-    glColor3f(0.5, 0, 0.5);
-    glTranslatef(5 * zoom,
-                 (int(gItemRepository3.out) - int(gItemRepository3.BUFFER_SIZE) / 2) * zoom * 2, 0);
-    drawArrow();
-    glPopMatrix();
 
     // 最先画坐标和框
     glPushMatrix();
@@ -281,26 +233,12 @@ void myDisplay() {
     glutSwapBuffers();
 }
 
-// 有动作再调用
 void myIdle(int i) {
-    std::unique_lock<std::mutex> lock1(gItemRepository1.mtx);
-    std::unique_lock<std::mutex> lock2(gItemRepository2.mtx);
-    std::unique_lock<std::mutex> lock3(gItemRepository3.mtx);
+    std::lock_guard<std::mutex> lock1(ghd[0]->ir->mtx);
+    std::lock_guard<std::mutex> lock2(ghd[1]->ir->mtx);
+    std::lock_guard<std::mutex> lock3(ghd[2]->ir->mtx);
     myDisplay();
-    lock1.unlock(); // 解锁.
-    lock2.unlock(); // 解锁.
-    lock3.unlock(); // 解锁.
     glutTimerFunc(20, myIdle, 1);
-}
-
-void drawFrame(ItemRepository *ir) {
-    // 画框
-    glPushMatrix();
-    glTranslatef(0, 0, zoom);
-    glScalef(1, ir->BUFFER_SIZE, 1);
-    glLineWidth(2);
-    glutWireCube(2 * zoom);
-    glPopMatrix();
 }
 
 void init() {
@@ -311,24 +249,16 @@ void init() {
     index = glGenLists(1);//glGenLists()唯一的标识一个显示列表
     glNewList(index, GL_COMPILE);//用于对显示列表进行定界。第一个参数是一个整形索引值，由glGenLists()指定
 
+    // 框
     glColor3f(0, 1, 0);
-    // Buff1
-    glPushMatrix();
-    glTranslatef(-10 * zoom, 0, 0);
-    drawFrame(&gItemRepository1);
-    glPopMatrix();
-
-    // Buff2
-    glPushMatrix();
-    glTranslatef(10 * zoom, 6 * zoom, 0);
-    drawFrame(&gItemRepository2);
-    glPopMatrix();
-
-    // Buff3
-    glPushMatrix();
-    glTranslatef(10 * zoom, -6 * zoom, 0);
-    drawFrame(&gItemRepository3);
-    glPopMatrix();
+    for (auto &item:ghd) {
+        glPushMatrix();
+        glTranslatef(item->x, item->y, item->z + zoom);
+        glScalef(1, item->ir->BUFFER_SIZE, 1);
+        glLineWidth(2);
+        glutWireCube(2 * zoom);
+        glPopMatrix();
+    }
 
     // 再画线
     glPushMatrix();
@@ -364,11 +294,11 @@ void init() {
     glEndList();
 
     // 任务
-    vt.push_back(new std::thread(putTask, &gItemRepository1, &vSpeed[0]));
-    vt.push_back(new std::thread(moveTask, &gItemRepository1, &gItemRepository2, &vSpeed[1]));
-    vt.push_back(new std::thread(moveTask, &gItemRepository1, &gItemRepository3, &vSpeed[2]));
-    vt.push_back(new std::thread(getTask, &gItemRepository2, &vSpeed[3]));
-    vt.push_back(new std::thread(getTask, &gItemRepository3, &vSpeed[4]));
+    vt.push_back(new std::thread(putTask, ghd[0]->ir, &vSpeed[0]));
+    vt.push_back(new std::thread(moveTask, ghd[0]->ir, ghd[1]->ir, &vSpeed[1]));
+    vt.push_back(new std::thread(moveTask, ghd[0]->ir, ghd[2]->ir, &vSpeed[2]));
+    vt.push_back(new std::thread(getTask, ghd[1]->ir, &vSpeed[3]));
+    vt.push_back(new std::thread(getTask, ghd[2]->ir, &vSpeed[4]));
     for (auto &item:vt) item->detach();
 }
 

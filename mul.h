@@ -4,7 +4,6 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
-//#include "myList.h"
 
 // 产品模型
 struct object {
@@ -36,21 +35,6 @@ struct ItemRepository {
     }
 }; // 产品库全局变量, 生产者和消费者操作该变量.
 
-// 消息结点
-struct node {
-    ItemRepository *ir;
-    ItemRepository *ir2{};
-    object *ob, *ob2{};
-    int action; // 1 p 2 m 3 c
-
-    node(ItemRepository *ir, ItemRepository *ir2, object *ob, object *ob2, int action)
-            : ir(ir), ir2(ir2), ob(ob), ob2(ob2), action(action) {}
-
-    node(ItemRepository *ir, object *ob, int action) : ir(ir), ob(ob), action(action) {}
-};
-
-//threadsafe_queue<node> mesQ; // 消息队列
-
 void ProduceItem(ItemRepository *ir, object *item) {
     while (ir->counter == ir->BUFFER_SIZE); // 等待
     std::lock_guard<std::mutex> lock(ir->mtx);
@@ -58,9 +42,6 @@ void ProduceItem(ItemRepository *ir, object *item) {
     item->rei = ir->in;
     ir->in = (ir->in + 1) % ir->BUFFER_SIZE;
     ir->counter++;
-
-    node n(ir, item, 1);
-//    mesQ.push(n);
 }
 
 object *ConsumeItem(ItemRepository *ir) {
@@ -72,20 +53,13 @@ object *ConsumeItem(ItemRepository *ir) {
     item->rei = ir->out;
     ir->out = (ir->out + 1) % ir->BUFFER_SIZE;
     ir->counter--;
-
-    node n(ir, item, 3);
-//    mesQ.push(n);
     return item; // 返回产品.
 }
 
 void MoveItem(ItemRepository *in, ItemRepository *out) {
-//    while (in->counter <= 1);
     auto *item = ConsumeItem(in);
     if (item == nullptr) return;
     ProduceItem(out, item);
-
-    node n(in, out, item, item, 2);
-//    mesQ.push(n);
 }
 
 void putTask(ItemRepository *gItemRepository, const float *idle) {
