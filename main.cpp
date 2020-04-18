@@ -156,11 +156,10 @@ void processNormalKeys(unsigned char key, int x, int y) {
             1000.0f / vSpeed[0], 1000.0f / vSpeed[1], 1000.0f / vSpeed[2], 1000.0f / vSpeed[3], 1000.0f / vSpeed[4]);
 //    TextOut(10, 10, str);
     system("cls");
-    cout << str;
+    std::cout << str;
 }
 
 void drawSphere(ItemRepository *ir, object *ob, int i) {
-    if (i >= ir->BUFFER_SIZE || i < 0) return; // TODO 不知道为什么可以超范围
     glColor3f(ob->r, ob->g, ob->b);
     glPushMatrix();
     glTranslatef(0, (i - int(ir->BUFFER_SIZE) / 2) * zoom * 2, zoom);
@@ -174,22 +173,22 @@ void drawArrow() {
     glutSolidCone(zoom, zoom * 2, 100, 100);
 }
 
-void display(std::shared_ptr<node> n) {
-    glTranslatef(0, (n->ob->rei - int(n->ir->BUFFER_SIZE) / 2) * zoom * 2, 0);
-    if (n->action == 1) { // p
-        glTranslatef(-zoom * 15, 0, 0);
-        glColor3f(0, 1, 1);
-    } else if (n->action == 2) { // m
-        if (n->ir2->index == 2) glTranslatef(zoom * 5, 6 * zoom, 0);
-        else glTranslatef(zoom * 5, -6 * zoom, 0);
-        glColor3f(0, 0, 1);
-    } else { // c
-        if (n->ir->index == 2) glTranslatef(zoom * 15, 6 * zoom, 0);
-        else glTranslatef(zoom * 15, -6 * zoom, 0);
-        glColor3f(1, 0, 0);
-    }
-    drawArrow();
-}
+//void display(std::shared_ptr<node> n) {
+//    glTranslatef(0, (n->ob->rei - int(n->ir->BUFFER_SIZE) / 2) * zoom * 2, 0);
+//    if (n->action == 1) { // p
+//        glTranslatef(-zoom * 15, 0, 0);
+//        glColor3f(0, 1, 1);
+//    } else if (n->action == 2) { // m
+//        if (n->ir2->index == 2) glTranslatef(zoom * 5, 6 * zoom, 0);
+//        else glTranslatef(zoom * 5, -6 * zoom, 0);
+//        glColor3f(0, 0, 1);
+//    } else { // c
+//        if (n->ir->index == 2) glTranslatef(zoom * 15, 6 * zoom, 0);
+//        else glTranslatef(zoom * 15, -6 * zoom, 0);
+//        glColor3f(1, 0, 0);
+//    }
+//    drawArrow();
+//}
 
 std::shared_ptr<node> n;
 int coun;
@@ -203,18 +202,18 @@ void myDisplay() {
     glRotatef(xrot, 1.0f, 0.0f, 0.0f);
     glRotatef(yrot, 0.0f, 1.0f, 0.0f);
 
-    if (!mesQ.empty()) {
-        n = mesQ.wait_and_pop();
-        coun = 10;
-    }
-
-    // 消息队列处理
-    glPushMatrix();
-    if (coun) {
-        display(n);
-        coun--;
-    }
-    glPopMatrix();
+//    if (!mesQ.empty()) {
+//        n = mesQ.wait_and_pop();
+//        coun = 10;
+//    }
+//
+//    // 消息队列处理
+//    glPushMatrix();
+//    if (coun) {
+//        display(n);
+//        coun--;
+//    }
+//    glPopMatrix();
 
     // 绘制球
     glPushMatrix();
@@ -223,6 +222,17 @@ void myDisplay() {
         object *ob = gItemRepository1.buffer[i];
         if (ob) drawSphere(&gItemRepository1, gItemRepository1.buffer[i], ob->rei);
     }
+
+    glColor3f(0, 0, 1);
+    glPushMatrix();
+    glTranslatef(-5 * zoom,
+                 (int(gItemRepository1.in) - int(gItemRepository1.BUFFER_SIZE) / 2) * zoom * 2, 0);
+    drawArrow();
+    glColor3f(0, 0, 0.5);
+    glPopMatrix();
+    glTranslatef(5 * zoom,
+                 (int(gItemRepository1.out) - int(gItemRepository1.BUFFER_SIZE) / 2) * zoom * 2, 0);
+    drawArrow();
     glPopMatrix();
 
     glPushMatrix();
@@ -231,6 +241,17 @@ void myDisplay() {
         object *ob = gItemRepository2.buffer[i];
         if (ob) drawSphere(&gItemRepository2, gItemRepository2.buffer[i], ob->rei);
     }
+
+    glColor3f(0, 1, 1);
+    glPushMatrix();
+    glTranslatef(-5 * zoom,
+                 (int(gItemRepository2.in) - int(gItemRepository2.BUFFER_SIZE) / 2) * zoom * 2, 0);
+    drawArrow();
+    glPopMatrix();
+    glColor3f(0, 0.5, 0.5);
+    glTranslatef(5 * zoom,
+                 (int(gItemRepository2.out) - int(gItemRepository2.BUFFER_SIZE) / 2) * zoom * 2, 0);
+    drawArrow();
     glPopMatrix();
 
     glPushMatrix();
@@ -239,6 +260,17 @@ void myDisplay() {
         object *ob = gItemRepository3.buffer[i];
         if (ob) drawSphere(&gItemRepository3, gItemRepository3.buffer[i], ob->rei);
     }
+
+    glColor3f(1, 0, 1);
+    glPushMatrix();
+    glTranslatef(-5 * zoom,
+                 (int(gItemRepository3.in) - int(gItemRepository3.BUFFER_SIZE) / 2) * zoom * 2, 0);
+    drawArrow();
+    glPopMatrix();
+    glColor3f(0.5, 0, 0.5);
+    glTranslatef(5 * zoom,
+                 (int(gItemRepository3.out) - int(gItemRepository3.BUFFER_SIZE) / 2) * zoom * 2, 0);
+    drawArrow();
     glPopMatrix();
 
     // 最先画坐标和框
@@ -258,7 +290,7 @@ void myIdle(int i) {
     lock1.unlock(); // 解锁.
     lock2.unlock(); // 解锁.
     lock3.unlock(); // 解锁.
-    glutTimerFunc(50, myIdle, 1);
+    glutTimerFunc(20, myIdle, 1);
 }
 
 void drawFrame(ItemRepository *ir) {
@@ -342,8 +374,8 @@ void init() {
 
 int main(int argc, char *argv[]) {
     system("cls");
-    cout << "Welcone\n\tq,w,e,r,t ---- Accelerated \n\ta,s,d,f,g ---- decelerated\n";
-    cout << "\tyou can also use mouse to control field";
+    std::cout << "Welcone\n\tq,w,e,r,t ---- Accelerated \n\ta,s,d,f,g ---- decelerated\n";
+    std::cout << "\tyou can also use mouse to control field";
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
@@ -353,7 +385,7 @@ int main(int argc, char *argv[]) {
 
     glutDisplayFunc(myDisplay);
 //    glutIdleFunc(myIdle);  // 表示在CPU空闲的时间调用某一函数
-    glutTimerFunc(50, myIdle, 1);
+    glutTimerFunc(20, myIdle, 1);
     glutSpecialFunc(processSpecialKeys);  // 按键
     glutKeyboardFunc(processNormalKeys);
     glutReshapeFunc(changeSize);
