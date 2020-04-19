@@ -20,9 +20,6 @@ const int width = 200;
 const int height = 200;
 
 int index; // 显示列表
-std::vector<std::thread *> vt;
-std::vector<float> vSpeed{500, 1210, 2500, 2120, 2920};
-
 bool colorflag;
 
 struct bufferObj {
@@ -41,12 +38,42 @@ struct bufferObj {
             : ir(ir), x(x), y(y), z(z), r(r), g(g), b(b) {}
 };
 
-// 为了显示好看，尽量奇数
-std::vector<bufferObj *> ghd{
-        new bufferObj(new ItemRepository(1, 9), -10 * zoom, 0, 0),
-        new bufferObj(new ItemRepository(2, 5), 10 * zoom, 6 * zoom, 0),
-        new bufferObj(new ItemRepository(3, 5), 10 * zoom, -6 * zoom, 0),
-};
+std::vector<bufferObj *> ghd;
+std::vector<std::thread *> vt;
+std::vector<float> vSpeed{500, 1210, 1800, 2190, 2720, 2580, 3010};
+
+// 总任务配置区
+void initGhd() {
+//    // 添加框，即缓冲区，为了显示好看，尽量奇数
+//    // 缓冲区标号、大小，缓冲区摆放位置
+//    ghd.push_back(new bufferObj(new ItemRepository(1, 9), -10 * zoom, 0, 0));
+//    ghd.push_back(new bufferObj(new ItemRepository(2, 3), 10 * zoom, 7 * zoom, 0));
+//    ghd.push_back(new bufferObj(new ItemRepository(3, 3), 10 * zoom, 0 * zoom, 0));
+//    ghd.push_back(new bufferObj(new ItemRepository(4, 3), 10 * zoom, -7 * zoom, 0));
+//    // 任务，即启动箭头任务
+//    // 任务名、输入缓冲区，输出缓冲区，速度
+//    vt.push_back(new std::thread(putTask, nullptr, ghd[0]->ir, &vSpeed[0]));
+//    vt.push_back(new std::thread(moveTask, ghd[0]->ir, ghd[1]->ir, &vSpeed[1]));
+//    vt.push_back(new std::thread(moveTask, ghd[0]->ir, ghd[2]->ir, &vSpeed[2]));
+//    vt.push_back(new std::thread(moveTask, ghd[0]->ir, ghd[3]->ir, &vSpeed[3]));
+//    vt.push_back(new std::thread(getTask, ghd[1]->ir, nullptr, &vSpeed[4]));
+//    vt.push_back(new std::thread(getTask, ghd[2]->ir, nullptr, &vSpeed[5]));
+//    vt.push_back(new std::thread(getTask, ghd[3]->ir, nullptr, &vSpeed[6]));
+//    for (auto &item:vt) item->detach();
+    // 添加框，即缓冲区，为了显示好看，尽量奇数
+    // 缓冲区标号、大小，缓冲区摆放位置
+    ghd.push_back(new bufferObj(new ItemRepository(1, 9), -10 * zoom, 0, 0));
+    ghd.push_back(new bufferObj(new ItemRepository(2, 5), 10 * zoom, 6 * zoom, 0));
+    ghd.push_back(new bufferObj(new ItemRepository(3, 5), 10 * zoom, -6 * zoom, 0));
+    // 任务，即启动箭头任务
+    // 任务名、输入缓冲区，输出缓冲区，速度
+    vt.push_back(new std::thread(putTask, nullptr, ghd[0]->ir, &vSpeed[0]));
+    vt.push_back(new std::thread(moveTask, ghd[0]->ir, ghd[1]->ir, &vSpeed[1]));
+    vt.push_back(new std::thread(moveTask, ghd[0]->ir, ghd[2]->ir, &vSpeed[2]));
+    vt.push_back(new std::thread(getTask, ghd[1]->ir, nullptr, &vSpeed[3]));
+    vt.push_back(new std::thread(getTask, ghd[2]->ir, nullptr, &vSpeed[4]));
+    for (auto &item:vt) item->detach();
+}
 
 /**
  * 定义观察方式
@@ -242,6 +269,7 @@ void myIdle(int i) {
 }
 
 void init() {
+    initGhd();
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.93f, 0.93f, 0.93f, 0.0f);
 
@@ -292,14 +320,6 @@ void init() {
     glRectf(-width * zoom, -height * zoom, width * zoom, height * zoom);
     glPopMatrix();
     glEndList();
-
-    // 任务
-    vt.push_back(new std::thread(putTask, ghd[0]->ir, &vSpeed[0]));
-    vt.push_back(new std::thread(moveTask, ghd[0]->ir, ghd[1]->ir, &vSpeed[1]));
-    vt.push_back(new std::thread(moveTask, ghd[0]->ir, ghd[2]->ir, &vSpeed[2]));
-    vt.push_back(new std::thread(getTask, ghd[1]->ir, &vSpeed[3]));
-    vt.push_back(new std::thread(getTask, ghd[2]->ir, &vSpeed[4]));
-    for (auto &item:vt) item->detach();
 }
 
 int main(int argc, char *argv[]) {

@@ -62,7 +62,7 @@ void MoveItem(ItemRepository *in, ItemRepository *out) {
     ProduceItem(out, item);
 }
 
-void putTask(ItemRepository *gItemRepository, const float *idle) {
+void putTask(ItemRepository *gItemRepository2, ItemRepository *gItemRepository, const float *idle) {
     static int i;
     while (true) {
         int idlei = *idle;
@@ -71,7 +71,7 @@ void putTask(ItemRepository *gItemRepository, const float *idle) {
     }
 }
 
-void getTask(ItemRepository *gItemRepository, const float *idle) {
+void getTask(ItemRepository *gItemRepository, ItemRepository *gItemRepository2, const float *idle) {
     while (true) {
         int idlei = *idle;
         std::this_thread::sleep_for(std::chrono::milliseconds(idlei));
