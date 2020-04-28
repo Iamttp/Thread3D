@@ -4,6 +4,7 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include "semaphore.h"
 
 // 产品模型
 struct object {
@@ -26,9 +27,15 @@ struct ItemRepository {
     size_t out = 0; // 消费者读取产品位置.
     size_t in = 0; // 生产者写入产品位置.
     size_t counter = 0; // 当前容量
-    std::mutex mtx; // 互斥量,保护产品缓冲区
+    semaphore *mtxL;
+    semaphore *emptyL;
+    semaphore *fullL;
 
-    ItemRepository(int index, int bufferSize) : index(index), BUFFER_SIZE(bufferSize) {}
+    ItemRepository(int index, int bufferSize) : index(index), BUFFER_SIZE(bufferSize) {
+        emptyL = new semaphore(bufferSize);
+        fullL = new semaphore(0);
+        mtxL = new semaphore();
+    }
 
     virtual ~ItemRepository() {
         delete[]buffer;
@@ -36,23 +43,26 @@ struct ItemRepository {
 }; // 产品库全局变量, 生产者和消费者操作该变量.
 
 void ProduceItem(ItemRepository *ir, object *item) {
-    while (ir->counter == ir->BUFFER_SIZE); // 等待
-    std::lock_guard<std::mutex> lock(ir->mtx);
+    ir->emptyL->wait();
+    ir->mtxL->wait();
     ir->buffer[ir->in] = item;
     item->rei = ir->in;
     ir->in = (ir->in + 1) % ir->BUFFER_SIZE;
     ir->counter++;
+    ir->mtxL->signal();
+    ir->fullL->signal();
 }
 
 object *ConsumeItem(ItemRepository *ir) {
-    while (ir->counter == 0); // 等待
-    std::lock_guard<std::mutex> lock(ir->mtx);
-    if (ir->counter == 0) return nullptr; // 多个consumeItem 解决方法
+    ir->fullL->wait();
+    ir->mtxL->wait();
     auto *item = ir->buffer[ir->out];
     ir->buffer[ir->out] = nullptr;
     item->rei = ir->out;
     ir->out = (ir->out + 1) % ir->BUFFER_SIZE;
     ir->counter--;
+    ir->mtxL->signal();
+    ir->emptyL->signal();
     return item; // 返回产品.
 }
 

@@ -261,10 +261,9 @@ void myDisplay() {
 }
 
 void myIdle(int i) {
-    std::lock_guard<std::mutex> lock1(ghd[0]->ir->mtx);
-    std::lock_guard<std::mutex> lock2(ghd[1]->ir->mtx);
-    std::lock_guard<std::mutex> lock3(ghd[2]->ir->mtx);
+    for (auto &item:ghd) item->ir->mtxL->wait();
     myDisplay();
+    for (auto &item:ghd) item->ir->mtxL->signal();
     glutTimerFunc(20, myIdle, 1);
 }
 
