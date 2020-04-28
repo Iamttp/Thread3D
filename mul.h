@@ -1,9 +1,6 @@
 #ifndef OPENGLGAME_MUL_H
 #define OPENGLGAME_MUL_H
 
-#include <iostream>
-#include <mutex>
-#include <thread>
 #include "semaphore.h"
 
 // 产品模型
@@ -23,7 +20,7 @@ struct object {
 struct ItemRepository {
     int index;
     int BUFFER_SIZE; // Item buffer size.
-    object **buffer = new object *[BUFFER_SIZE](); // 产品缓冲区
+    object **buffer; // 产品缓冲区
     size_t out = 0; // 消费者读取产品位置.
     size_t in = 0; // 生产者写入产品位置.
     size_t counter = 0; // 当前容量
@@ -32,6 +29,7 @@ struct ItemRepository {
     semaphore *fullL;
 
     ItemRepository(int index, int bufferSize) : index(index), BUFFER_SIZE(bufferSize) {
+        buffer = new object *[BUFFER_SIZE]();
         emptyL = new semaphore(bufferSize);
         fullL = new semaphore(0);
         mtxL = new semaphore();
@@ -39,8 +37,11 @@ struct ItemRepository {
 
     virtual ~ItemRepository() {
         delete[]buffer;
+        delete mtxL;
+        delete emptyL;
+        delete fullL;
     }
-}; // 产品库全局变量, 生产者和消费者操作该变量.
+};
 
 void ProduceItem(ItemRepository *ir, object *item) {
     ir->emptyL->wait();

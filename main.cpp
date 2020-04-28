@@ -1,5 +1,5 @@
 #include <GL/glut.h>
-#include <thread>
+#include <iostream>
 #include <vector>
 #include <ctime>
 #include "mul.h"
