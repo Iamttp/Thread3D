@@ -68,9 +68,7 @@ object *ConsumeItem(ItemRepository *ir) {
 }
 
 void MoveItem(ItemRepository *in, ItemRepository *out) {
-    auto *item = ConsumeItem(in);
-    if (item == nullptr) return;
-    ProduceItem(out, item);
+    ProduceItem(out, ConsumeItem(in));
 }
 
 void putTask(ItemRepository *gItemRepository2, ItemRepository *gItemRepository, const float *idle) {
