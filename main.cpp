@@ -459,7 +459,7 @@ void processSpecialKeys(int key, int x, int y) {
     }
 }
 
-int rate = 10;
+int rate = 1;
 
 void myDisplay() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -473,7 +473,10 @@ void myDisplay() {
     glPointSize(2);
     glColor3f(0.5, 0, 0);
     glBegin(GL_POINTS);
-    for (auto &item:vec) glVertex3f(item.x * rate, item.y * rate, item.z * rate);
+    for (auto &item:vec) {
+        glColor3f(item.x, item.y, item.z);
+        glVertex3f(item.x * rate, item.y * rate, item.z * rate);
+    }
     glEnd();
 
     // 最先画坐标和框
@@ -491,21 +494,24 @@ void getCenter(pos &p1, pos &p2, pos &p3) {
 }
 
 void myIdle(int i) {
-    for (int i = 0; i < 10 * rate; i++) {
-        int choose = rand() % 4;
-        pos cent{};
-        getCenter(vec[choose], vec.back(), cent);
-        vec.push_back(cent);
+    for (int i = 0; i < 100 * rate; i++) {
+        int choose = rand() % 100;
+        double ox = vec.back().x, oy = vec.back().y, oz = vec.back().z;
+        if (choose == 0) {
+            vec.push_back({0, 0.16f * oy, 0});
+        } else if (choose < 85) {
+            vec.push_back({0.85 * ox + 0.04 * oy, 0.04 * ox + 0.85 * oy + 1.6, 0});
+        } else if (choose < 92) {
+            vec.push_back({0.2 * ox - 0.26 * oy, 0.23 * ox + 0.22 * oy + 1.6, 0});
+        } else {
+            vec.push_back({-0.15 * ox + 0.28 * oy, 0.26 * ox + 0.24 * oy + 0.44, 0});
+        }
     }
     myDisplay();
     glutTimerFunc(10, myIdle, 1);
 }
 
 void init() {
-    vec.push_back({-sqrt3, -1, 0});
-    vec.push_back({sqrt3, -1, 0});
-    vec.push_back({0, 2, 0});
-    vec.push_back({0, 0, 2});
     vec.push_back({0, 0, 0});
 
     glEnable(GL_DEPTH_TEST);
