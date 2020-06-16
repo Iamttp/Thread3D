@@ -353,7 +353,7 @@
 #include <cmath>
 
 static float myratio;  // angle绕y轴的旋转角，ratio窗口高宽比
-static float x = 0.0f, y = 0.0f, z = 5.0f;  //相机位置
+static float x = 0.0f, y = 0.0f, z = 1.5f;  //相机位置
 static float lx = 0.0f, ly = 0.0f, lz = -1.0f;  //视线方向，初始设为沿着Z轴负方向
 
 const int WIDTH = 1000;
@@ -363,12 +363,6 @@ bool mouseDown = false;
 float xrot = 0.0f, yrot = 0.0f;
 float xdiff = 0.0f, ydiff = 0.0f;
 int index; // 显示列表
-
-struct pos {
-    double x, y, z;
-};
-const double sqrt3 = sqrt(3);
-std::vector<pos> vec;
 
 /**
  * 定义观察方式
@@ -459,7 +453,41 @@ void processSpecialKeys(int key, int x, int y) {
     }
 }
 
-int rate = 1;
+const int N = 24, M = 1e6;
+
+struct complex {
+    float i, j;
+
+    complex mul(complex &b) {
+        float tempI = i * b.i - j * b.j;
+        float tempJ = i * b.j + j * b.i;
+        i = tempI, j = tempJ;
+        return *this;
+    }
+
+    complex add(complex &b) {
+        i += b.i, j += b.j;
+        return *this;
+    }
+};
+
+int col[HEIGHT][WIDTH];
+
+void func(complex &C) {
+    float d = 3.0f / HEIGHT;
+    for (int i = 0; i < HEIGHT; i++)
+        for (int j = 0; j < WIDTH; j++) {
+            col[i][j] = 0;
+            complex X{-1.5f + i * d, -1.5f + j * d}; // (-1.5,1.5)
+            for (int k = 0; k < N; ++k) {
+                X = X.mul(X).add(C);
+                if (X.i * X.i + X.j * X.j > M) {
+                    col[i][j] = k;
+                    break;
+                }
+            }
+        }
+}
 
 void myDisplay() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -470,13 +498,20 @@ void myDisplay() {
     glRotatef(xrot, 1.0f, 0.0f, 0.0f);
     glRotatef(yrot, 0.0f, 1.0f, 0.0f);
 
-    glPointSize(2);
-    glColor3f(0.5, 0, 0);
     glBegin(GL_POINTS);
-    for (auto &item:vec) {
-        glColor3f(item.x, item.y, item.z);
-        glVertex3f(item.x * rate, item.y * rate, item.z * rate);
-    }
+    float xx, yy;
+    for (int i = 0; i < HEIGHT; i++)
+        for (int j = 0; j < WIDTH; j++) {
+            int k = col[i][j];
+            if (k > 6) {
+                int tempK = k * k;
+                tempK = tempK * tempK;
+                xx = -0.5 + (float) i / (HEIGHT); // (-1,1)
+                yy = -0.5 + (float) j / (WIDTH); // (1,-1)
+                glColor3us(tempK + tempK, exp(k), tempK * k);
+                glVertex3d(xx, yy, 0.1);
+            }
+        }
     glEnd();
 
     // 最先画坐标和框
@@ -487,33 +522,33 @@ void myDisplay() {
     glutSwapBuffers();
 }
 
-void getCenter(pos &p1, pos &p2, pos &p3) {
-    p3.x = (p1.x + p2.x) / 2.0;
-    p3.y = (p1.y + p2.y) / 2.0;
-    p3.z = (p1.z + p2.z) / 2.0;
+void compute(float rate) {
+//    complex C{-0.835, 0.2321};
+//    complex C{0.285, 0.01};
+//    complex C{-0.8, 0.156};
+    static float ii = -1, jj = -1;
+    static bool flag = true;
+    if (flag) ii += rate;
+    else ii -= rate;
+    if (ii > 1) {
+        jj += rate;
+        flag = false;
+    }
+    if (ii < -1) {
+        jj += rate;
+        flag = true;
+    }
+    complex C{ii, jj};
+    func(C);
 }
 
 void myIdle(int i) {
-    for (int i = 0; i < 100 * rate; i++) {
-        int choose = rand() % 100;
-        double ox = vec.back().x, oy = vec.back().y, oz = vec.back().z;
-        if (choose == 0) {
-            vec.push_back({0, 0.16f * oy, 0});
-        } else if (choose < 85) {
-            vec.push_back({0.85 * ox + 0.04 * oy, 0.04 * ox + 0.85 * oy + 1.6, 0});
-        } else if (choose < 92) {
-            vec.push_back({0.2 * ox - 0.26 * oy, 0.23 * ox + 0.22 * oy + 1.6, 0});
-        } else {
-            vec.push_back({-0.15 * ox + 0.28 * oy, 0.26 * ox + 0.24 * oy + 0.44, 0});
-        }
-    }
+    compute(0.1);
     myDisplay();
     glutTimerFunc(10, myIdle, 1);
 }
 
 void init() {
-    vec.push_back({0, 0, 0});
-
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.93f, 0.93f, 0.93f, 0.0f);
 
@@ -524,7 +559,6 @@ void init() {
 }
 
 int main(int argc, char *argv[]) {
-    srand((unsigned int) time(0));
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowPosition(100, 100);
