@@ -347,10 +347,9 @@
 //}
 
 #include <GL/glut.h>
-#include <iostream>
-#include <vector>
-#include <ctime>
 #include <cmath>
+#include <cstdio>
+#include <ctime>
 
 static float myratio;  // angle绕y轴的旋转角，ratio窗口高宽比
 static float x = 0.0f, y = 0.0f, z = 1.5f;  //相机位置
@@ -362,7 +361,6 @@ const int HEIGHT = 1000;
 bool mouseDown = false;
 float xrot = 0.0f, yrot = 0.0f;
 float xdiff = 0.0f, ydiff = 0.0f;
-int index; // 显示列表
 
 /**
  * 定义观察方式
@@ -405,12 +403,19 @@ void moveMeFlat(int direction) {
 /**
  * 鼠标事件
 */
+bool stop = false;
+
 void mouse(int button, int state, int x, int y) {
+    if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
+        stop = !stop;
+    }
+
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
         mouseDown = true;
         xdiff = x - yrot;
         ydiff = -y + xrot;
-    } else
+    }
+    else
         mouseDown = false;
 }
 
@@ -428,61 +433,51 @@ void mouseMotion(int x, int y) {
 /**
  * 加入按键控制
  */
-void processSpecialKeys(int key, int x, int y) {
-    switch (key) {
-        case GLUT_KEY_UP:
-            orientMe(0, 1);
-            break;
-        case GLUT_KEY_DOWN:
-            orientMe(0, -1);
-            break;
-        case GLUT_KEY_LEFT:
-            orientMe(-1, 0);
-            break;
-        case GLUT_KEY_RIGHT:
-            orientMe(1, 0);
-            break;
-        case GLUT_KEY_PAGE_DOWN:
-            moveMeFlat(-1);
-            break;
-        case GLUT_KEY_PAGE_UP:
-            moveMeFlat(1);
-            break;
-        default:
-            break;
-    }
-}
+float rateZoom = 1.5f;
 
-const int N = 24, M = 1e6;
+
+const int N = 100, M = 1000;
+struct col {
+    GLushort r, g, b;
+} colKTable[N];
+struct pos {
+    float x, y, z;
+} posArr[HEIGHT * WIDTH];
+col colArr[HEIGHT * WIDTH];
+int index_list[HEIGHT * WIDTH];
 
 struct complex {
     float i, j;
 
-    complex mul(complex &b) {
+    inline complex mul(complex& b) {
         float tempI = i * b.i - j * b.j;
         float tempJ = i * b.j + j * b.i;
         i = tempI, j = tempJ;
         return *this;
     }
 
-    complex add(complex &b) {
+    inline complex add(complex& b) {
         i += b.i, j += b.j;
         return *this;
     }
 };
 
-int col[HEIGHT][WIDTH];
+complex alpha{ 0, 0 };
 
-void func(complex &C) {
-    float d = 3.0f / HEIGHT;
+void func(complex& C) {
+    float d = rateZoom * 2 / HEIGHT;
     for (int i = 0; i < HEIGHT; i++)
         for (int j = 0; j < WIDTH; j++) {
-            col[i][j] = 0;
-            complex X{-1.5f + i * d, -1.5f + j * d}; // (-1.5,1.5)
-            for (int k = 0; k < N; ++k) {
+            auto& item = colArr[i * WIDTH + j];
+            item.r = item.g = item.b = 0;
+            complex X{ -rateZoom + i * d, -rateZoom + j * d }; // (-1.5,1.5)
+            X = X.add(alpha);
+            for (auto& k : colKTable) {
                 X = X.mul(X).add(C);
                 if (X.i * X.i + X.j * X.j > M) {
-                    col[i][j] = k;
+                    item.r = k.r;
+                    item.g = k.g;
+                    item.b = k.b;
                     break;
                 }
             }
@@ -498,67 +493,125 @@ void myDisplay() {
     glRotatef(xrot, 1.0f, 0.0f, 0.0f);
     glRotatef(yrot, 0.0f, 1.0f, 0.0f);
 
-    glBegin(GL_POINTS);
-    float xx, yy;
-    for (int i = 0; i < HEIGHT; i++)
-        for (int j = 0; j < WIDTH; j++) {
-            int k = col[i][j];
-            if (k > 6) {
-                int tempK = k * k;
-                tempK = tempK * tempK;
-                xx = -0.5 + (float) i / (HEIGHT); // (-1,1)
-                yy = -0.5 + (float) j / (WIDTH); // (1,-1)
-                glColor3us(tempK + tempK, exp(k), tempK * k);
-                glVertex3d(xx, yy, 0.1);
-            }
-        }
-    glEnd();
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
 
-    // 最先画坐标和框
-    glPushMatrix();
-    glCallList(index);
-    glPopMatrix();
+    glVertexPointer(3, GL_FLOAT, sizeof(pos), posArr);
+    glColorPointer(3, GL_UNSIGNED_SHORT, sizeof(col), colArr);
+    glDrawElements(GL_POINTS, HEIGHT * WIDTH, GL_UNSIGNED_INT, index_list);
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
     glFlush();
     glutSwapBuffers();
 }
 
-void compute(float rate) {
-//    complex C{-0.835, 0.2321};
-//    complex C{0.285, 0.01};
-//    complex C{-0.8, 0.156};
+void compute(float rate, bool isGo) {
     static float ii = -1, jj = -1;
-    static bool flag = true;
-    if (flag) ii += rate;
-    else ii -= rate;
-    if (ii > 1) {
-        jj += rate;
-        flag = false;
+    if (isGo) {
+        static bool flag = true;
+        if (flag) ii += rate;
+        else ii -= rate;
+        if (ii > 1) {
+            jj += rate;
+            flag = false;
+        }
+        if (ii < -1) {
+            jj += rate;
+            flag = true;
+        }
     }
-    if (ii < -1) {
-        jj += rate;
-        flag = true;
-    }
-    complex C{ii, jj};
+    complex C{ ii, jj };
     func(C);
 }
 
-void myIdle(int i) {
-    compute(0.1);
+double CalFrequency() {
+    static int count;
+    static double save;
+    static clock_t last, current;
+    double timegap;
+
+    ++count;
+    if (count <= 50)
+        return save;
+    count = 0;
+    last = current;
+    current = clock();
+    timegap = (current - last) / (double)CLK_TCK;
+    save = 50.0 / timegap;
+    return save;
+}
+
+bool isGo = true;
+
+void myIdle() {
+    double FPS = CalFrequency();
+    printf("FPS = %f\n", FPS);
+    if (!stop) compute(0.05, isGo);
     myDisplay();
-    glutTimerFunc(10, myIdle, 1);
 }
 
 void init() {
+    for (int k = 0; k < N; k++) {
+        int tempK = k * k;
+        tempK = tempK * tempK;
+        colKTable[k].r = tempK + tempK;
+        colKTable[k].g = exp(k);
+        colKTable[k].b = tempK * k;
+    }
+
+    for (int i = 0; i < HEIGHT; i++)
+        for (int j = 0; j < WIDTH; j++) {
+            posArr[i * WIDTH + j].x = -0.5 + (float)i / (HEIGHT); // (-1,1)
+            posArr[i * WIDTH + j].y = -0.5 + (float)j / (WIDTH); // (1,-1)
+            posArr[i * WIDTH + j].z = 0;
+            index_list[i * WIDTH + j] = i * WIDTH + j;
+        }
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.93f, 0.93f, 0.93f, 0.0f);
-
-    // 显示列表
-    index = glGenLists(1);//glGenLists()唯一的标识一个显示列表
-    glNewList(index, GL_COMPILE);//用于对显示列表进行定界。第一个参数是一个整形索引值，由glGenLists()指定
-    glEndList();
 }
 
-int main(int argc, char *argv[]) {
+void processSpecialKeys(int key, int x, int y) {
+    bool temp;
+    temp = stop;
+    stop = false;
+    isGo = false;
+    float addRate = 0.1 * std::abs(std::exp(rateZoom) - 1);
+    switch (key) {
+        case GLUT_KEY_UP:
+            //            orientMe(0, 1);
+            alpha.j += addRate;
+            break;
+        case GLUT_KEY_DOWN:
+            //            orientMe(0, -1);
+            alpha.j -= addRate;
+            break;
+        case GLUT_KEY_LEFT:
+            //            orientMe(-1, 0);
+            alpha.i -= addRate;
+            break;
+        case GLUT_KEY_RIGHT:
+            //            orientMe(1, 0);
+            alpha.i += addRate;
+            break;
+        case GLUT_KEY_PAGE_DOWN:
+            //            moveMeFlat(-1);
+            rateZoom += addRate;
+            break;
+        case GLUT_KEY_PAGE_UP:
+            //            moveMeFlat(1);
+            rateZoom -= addRate;
+            break;
+        default:
+            break;
+    }
+    myIdle();
+    stop = temp;
+    isGo = true;
+}
+
+int main(int argc, char* argv[]) {
+    srand((unsigned int)time(0));
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowPosition(100, 100);
@@ -566,8 +619,7 @@ int main(int argc, char *argv[]) {
     glutCreateWindow("Demo");  // 改了窗口标题
 
     glutDisplayFunc(myDisplay);
-//    glutIdleFunc(myIdle);  // 表示在CPU空闲的时间调用某一函数
-    glutTimerFunc(10, myIdle, 1);
+    glutIdleFunc(myIdle);  // 表示在CPU空闲的时间调用某一函数
     glutSpecialFunc(processSpecialKeys);  // 按键
     glutReshapeFunc(changeSize);
     glutMouseFunc(mouse);
