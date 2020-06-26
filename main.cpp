@@ -3,6 +3,7 @@
 #include <ctime>
 #include "GLUI/GL2DSlider.h"
 #include "mul.h"
+#include "GLUI/GL2DButton.h"
 
 static float myratio;  // angle绕y轴的旋转角，ratio窗口高宽比
 static float x = 0.0f, y = 0.0f, z = 5.0f;  //相机位置
@@ -22,7 +23,9 @@ const int height = 200;
 int index; // 显示列表
 bool colorflag;
 std::vector<Slider> vecSlider;
-//Slider slider{-1, 1.6, 10, 0, 10000};
+char str[] = "hello";
+Button button(0, 0, str);
+bool stop = false;
 
 struct bufferObj {
     ItemRepository *ir;
@@ -130,14 +133,16 @@ void moveMeFlat(int direction) {
 /**
  * 鼠标事件
 */
-void mouse(int button, int state, int x, int y) {
-    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+void mouse(int but, int state, int x, int y) {
+    if (but == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
         for (int i = 0; i < vecSlider.size(); i++) {
             vecSlider[i].listen(x, y);
             vSpeed[i] = (100.0 / vecSlider[i].getVal() * 100);
         }
+        if (button.listen(x, y))
+            stop = !stop;
     }
-    if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
+    if (but == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
 
         mouseDown = true;
         xdiff = x - yrot;
@@ -213,6 +218,7 @@ void myDisplay() {
         slider.draw();
         glPopMatrix();
     }
+    button.draw();
 
     // 绘制球
     for (auto &item:ghd) {

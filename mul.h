@@ -71,9 +71,12 @@ void MoveItem(ItemRepository *in, ItemRepository *out) {
     ProduceItem(out, ConsumeItem(in));
 }
 
+extern bool stop;
+
 void putTask(ItemRepository *gItemRepository2, ItemRepository *gItemRepository, const float *idle) {
     static int i;
     while (true) {
+        if (stop) continue;
         int idlei = *idle;
         std::this_thread::sleep_for(std::chrono::milliseconds(idlei));
         ProduceItem(gItemRepository, new object(i++)); // 循环生产 kItemsToProduce 个产品.
@@ -82,6 +85,7 @@ void putTask(ItemRepository *gItemRepository2, ItemRepository *gItemRepository, 
 
 void getTask(ItemRepository *gItemRepository, ItemRepository *gItemRepository2, const float *idle) {
     while (true) {
+        if (stop) continue;
         int idlei = *idle;
         std::this_thread::sleep_for(std::chrono::milliseconds(idlei));
         delete ConsumeItem(gItemRepository); // 消费一个产品.
@@ -90,6 +94,7 @@ void getTask(ItemRepository *gItemRepository, ItemRepository *gItemRepository2, 
 
 void moveTask(ItemRepository *inRepository, ItemRepository *outRepository, const float *idle) {
     while (true) { // just move it
+        if (stop) continue;
         int idlei = *idle;
         std::this_thread::sleep_for(std::chrono::milliseconds(idlei));
         MoveItem(inRepository, outRepository); // 消费一个产品.

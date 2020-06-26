@@ -7,6 +7,6 @@ set(OPENGL_FILE F:/freeglut)
 INCLUDE_DIRECTORIES(${OPENGL_FILE}/include)
 link_directories("${OPENGL_FILE}/lib")
 
-add_executable(OpenGLGame mul.h main.cpp semaphore.h GLUI/GL2DSlider.h GLUI/GL2DUtil.h)
+add_executable(OpenGLGame mul.h main.cpp semaphore.h GLUI/GL2DSlider.h GLUI/GL2DUtil.h GLUI/GL2DButton.h GLUI/GL2DBase.h)
 
 target_link_libraries(OpenGLGame freeglut_static opengl32 winmm gdi32 glu32.lib)

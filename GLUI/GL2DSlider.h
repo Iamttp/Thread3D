@@ -3,7 +3,7 @@
 
 #include <GL/glut.h>
 #include "GL2DUtil.h"
-#include <iostream>
+#include "GL2DBase.h"
 
 /**
  * 使用规则 :
@@ -20,9 +20,7 @@
  *      eg: slider.getVal()
  *
  */
-class Slider {
-    float r{}, g{}, b{};
-    float x{}, y{}, z{};
+class Slider : public Base {
     float hBar{}, wBar{};
     float hBlock{}, wBlock{};
     float xBlock{};
@@ -72,7 +70,7 @@ public:
         valToX();
     }
 
-    void draw() {
+    void draw() override {
         // 块绘制
         glPushMatrix();
         glTranslatef(-wBar / 2 + xBlock + x, y, z + 0.001);
@@ -88,14 +86,16 @@ public:
         glPopMatrix();
     }
 
-    void listen(int xx, int yy) {
+    bool listen(int xx, int yy) override {
         MyPos myPos = screen2world(xx, yy);
         // 碰撞检测
         if (myPos.x >= x - wBar / 2 && myPos.x <= x + wBar / 2 &&
             myPos.y >= y - hBar / 2 && myPos.y <= y + hBar / 2) {
             xBlock = myPos.x - x + wBar / 2;
             XToVal();
+            return true;
         }
+        return false;
     }
 
     int getVal() const {
