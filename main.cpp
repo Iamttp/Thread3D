@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <ctime>
+#include "GL2DSlider.h"
 #include "mul.h"
 
 static float myratio;  // angle绕y轴的旋转角，ratio窗口高宽比
@@ -21,6 +22,8 @@ const int height = 200;
 
 int index; // 显示列表
 bool colorflag;
+std::vector<Slider> vecSlider;
+//Slider slider{-1, 1.6, 10, 0, 10000};
 
 struct bufferObj {
     ItemRepository *ir;
@@ -40,7 +43,9 @@ struct bufferObj {
 
 std::vector<bufferObj *> ghd;
 std::vector<std::thread *> vt;
-std::vector<float> vSpeed{500, 1210, 1800, 2190, 2720, 2580, 3010};
+
+// 表示延迟时间ms
+std::vector<float> vSpeed(10);
 
 // 总任务配置区
 void initGhd() {
@@ -73,6 +78,16 @@ void initGhd() {
     vt.push_back(new std::thread(getTask, ghd[1]->ir, nullptr, &vSpeed[3]));
     vt.push_back(new std::thread(getTask, ghd[2]->ir, nullptr, &vSpeed[4]));
     for (auto &item:vt) item->detach();
+
+    vecSlider.emplace_back(-1.5, 1.5, 50, 0, 100);
+    vecSlider.emplace_back(0, 1.6, 50, 0, 100);
+    vecSlider.emplace_back(0, 1.4, 50, 0, 100);
+    vecSlider.emplace_back(1.5, 1.6, 50, 0, 100);
+    vecSlider.emplace_back(1.5, 1.4, 50, 0, 100);
+
+    for (int i = 0; i < vecSlider.size(); i++) {
+        vSpeed[i] = (100.0 / vecSlider[i].getVal() * 100);
+    }
 }
 
 /**
@@ -118,11 +133,25 @@ void moveMeFlat(int direction) {
 */
 void mouse(int button, int state, int x, int y) {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        for (int i = 0; i < vecSlider.size(); i++) {
+            vecSlider[i].listen(x, y);
+            vSpeed[i] = (100.0 / vecSlider[i].getVal() * 100);
+        }
+    }
+    if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
+
         mouseDown = true;
         xdiff = x - yrot;
         ydiff = -y + xrot;
     } else
         mouseDown = false;
+
+    char str[80];
+    sprintf(str, "\nNow Speed:\n\tPut:%.2f\n\tMove1:%.2f\n\tMove2:%.2f\n\tGet1:%.2f\n\tGet2:%.2f\n\n",
+            1000.0f / vSpeed[0], 1000.0f / vSpeed[1], 1000.0f / vSpeed[2], 1000.0f / vSpeed[3], 1000.0f / vSpeed[4]);
+//    TextOut(10, 10, str);
+    system("cls");
+    std::cout << str;
 }
 
 /**
@@ -164,51 +193,6 @@ void processSpecialKeys(int key, int x, int y) {
     }
 }
 
-void processNormalKeys(unsigned char key, int x, int y) {
-    switch (key) {
-        case 'q':
-            vSpeed[0] *= 0.9;
-            break;
-        case 'w':
-            vSpeed[1] *= 0.9;
-            break;
-        case 'e':
-            vSpeed[2] *= 0.9;
-            break;
-        case 'r':
-            vSpeed[3] *= 0.9;
-            break;
-        case 't':
-            vSpeed[4] *= 0.9;
-            break;
-
-        case 'a':
-            vSpeed[0] *= 1.1;
-            break;
-        case 's':
-            vSpeed[1] *= 1.1;
-            break;
-        case 'd':
-            vSpeed[2] *= 1.1;
-            break;
-        case 'f':
-            vSpeed[3] *= 1.1;
-            break;
-        case 'g':
-            vSpeed[4] *= 1.1;
-            break;
-        default:
-            break;
-    }
-
-    char str[80];
-    sprintf(str, "Now Speed:\n\tPut:%.2f\n\tMove1:%.2f\n\tMove2:%.2f\n\tGet1:%.2f\n\tGet2:%.2f\n\n",
-            1000.0f / vSpeed[0], 1000.0f / vSpeed[1], 1000.0f / vSpeed[2], 1000.0f / vSpeed[3], 1000.0f / vSpeed[4]);
-//    TextOut(10, 10, str);
-    system("cls");
-    std::cout << str;
-}
-
 void drawSphere(ItemRepository *ir, object *ob, int i) {
     glColor3f(ob->r, ob->g, ob->b);
     glPushMatrix();
@@ -232,6 +216,12 @@ void myDisplay() {
     glRotatef(xrot, 1.0f, 0.0f, 0.0f);
     glRotatef(yrot, 0.0f, 1.0f, 0.0f);
 
+    for (auto &slider:vecSlider) {
+        glPushMatrix();
+        slider.draw();
+        glPopMatrix();
+    }
+
     // 绘制球
     for (auto &item:ghd) {
         glPushMatrix();
@@ -242,13 +232,19 @@ void myDisplay() {
         }
 
         glColor3f(item->r, item->g, item->b);
-        glPushMatrix();
-        glTranslatef(-5 * zoom, (int(item->ir->in) - int(item->ir->BUFFER_SIZE) / 2) * zoom * 2, 0);
-        drawArrow();
+        {
+            glPushMatrix();
+            glTranslatef(-5 * zoom, (int(item->ir->in) - int(item->ir->BUFFER_SIZE) / 2) * zoom * 2, 0);
+            drawArrow();
+            glPopMatrix();
+        }
         glColor3f(item->r * 0.5, item->g * 0.5, item->b * 0.5);
-        glPopMatrix();
-        glTranslatef(5 * zoom, (int(item->ir->out) - int(item->ir->BUFFER_SIZE) / 2) * zoom * 2, 0);
-        drawArrow();
+        {
+            glPushMatrix();
+            glTranslatef(5 * zoom, (int(item->ir->out) - int(item->ir->BUFFER_SIZE) / 2) * zoom * 2, 0);
+            drawArrow();
+            glPopMatrix();
+        }
         glPopMatrix();
     }
 
@@ -336,7 +332,6 @@ int main(int argc, char *argv[]) {
 //    glutIdleFunc(myIdle);  // 表示在CPU空闲的时间调用某一函数
     glutTimerFunc(20, myIdle, 1);
     glutSpecialFunc(processSpecialKeys);  // 按键
-    glutKeyboardFunc(processNormalKeys);
     glutReshapeFunc(changeSize);
     glutMouseFunc(mouse);
     glutMotionFunc(mouseMotion);
