@@ -1,8 +1,7 @@
 #include <GL/glut.h>
-#include <iostream>
 #include <vector>
 #include <ctime>
-#include "GL2DSlider.h"
+#include "GLUI/GL2DSlider.h"
 #include "mul.h"
 
 static float myratio;  // angle绕y轴的旋转角，ratio窗口高宽比
@@ -145,13 +144,6 @@ void mouse(int button, int state, int x, int y) {
         ydiff = -y + xrot;
     } else
         mouseDown = false;
-
-    char str[80];
-    sprintf(str, "\nNow Speed:\n\tPut:%.2f\n\tMove1:%.2f\n\tMove2:%.2f\n\tGet1:%.2f\n\tGet2:%.2f\n\n",
-            1000.0f / vSpeed[0], 1000.0f / vSpeed[1], 1000.0f / vSpeed[2], 1000.0f / vSpeed[3], 1000.0f / vSpeed[4]);
-//    TextOut(10, 10, str);
-    system("cls");
-    std::cout << str;
 }
 
 /**
@@ -318,10 +310,6 @@ void init() {
 }
 
 int main(int argc, char *argv[]) {
-    system("cls");
-    std::cout << "Welcone\n\tq,w,e,r,t ---- Accelerated \n\ta,s,d,f,g ---- decelerated\n";
-    std::cout << "\tyou can also use mouse to control field";
-
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowPosition(100, 100);

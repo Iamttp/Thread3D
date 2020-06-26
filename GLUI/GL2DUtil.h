@@ -1,7 +1,7 @@
 #ifndef OPENGLGAME_GL2DUTIL_H
 #define OPENGLGAME_GL2DUTIL_H
 
-// GUI主控件高度
+// GUI主控件高度，防止同层控件绘制不清
 #define ZGUI 0.01
 // GUI主控件比例
 #define RATE 1
@@ -10,7 +10,9 @@ struct MyPos {
     float x, y, z;
 };
 
-// https://blog.csdn.net/sac761/article/details/52179585
+/**
+ * 参考博客： https://blog.csdn.net/sac761/article/details/52179585
+ */
 MyPos screen2world(int x, int y) {
     int viewport[4];
     double modelview[16];

@@ -5,12 +5,30 @@
 #include "GL2DUtil.h"
 #include <iostream>
 
+/**
+ * 使用规则 :
+ *
+ * 1. 初始化滑动条
+ *      eg: Slider slider{-1, 1.6, 10, 0, 10000};
+ * 2. 在渲染循环里面绘制滑动条
+ *      eg: glPushMatrix();
+            slider.draw();
+            glPopMatrix();
+ * 3. 在鼠标事件里面监听，是否触发滑动条事件
+ *      eg: slider.listen(x, y);
+ * 4. 在合适位置获取滑动条的值
+ *      eg: slider.getVal()
+ *
+ */
 class Slider {
     float r{}, g{}, b{};
     float x{}, y{}, z{};
     float hBar{}, wBar{};
     float hBlock{}, wBlock{};
     float xBlock{};
+
+    int val{20};
+    int min{0}, max{100};
 
     void init() {
         r = g = b = 0.8;
@@ -22,8 +40,15 @@ class Slider {
         wBlock = 0.1 * RATE;
     }
 
-    int val{20};
-    int min{0}, max{100};
+    void valToX() {
+        float rate = float(val - min) / (max - min);
+        xBlock = wBar * rate;
+    }
+
+    void XToVal() {
+        float rate = xBlock / wBar;
+        val = min + (max - min) * rate;
+    }
 
 public:
     Slider() {
@@ -47,20 +72,6 @@ public:
         valToX();
     }
 
-    void valToX() {
-        float rate = float(val - min) / (max - min);
-        xBlock = wBar * rate;
-    }
-
-    void XToVal() {
-        float rate = xBlock / wBar;
-        val = min + (max - min) * rate;
-    }
-
-
-    /**
-     * 在建立OpenGL上下文环境后，初始化调用
-     */
     void draw() {
         // 块绘制
         glPushMatrix();
@@ -77,9 +88,6 @@ public:
         glPopMatrix();
     }
 
-    /**
-     * 在鼠标事件监听使用
-     */
     void listen(int xx, int yy) {
         MyPos myPos = screen2world(xx, yy);
         // 碰撞检测
@@ -93,13 +101,6 @@ public:
     int getVal() const {
         return val;
     }
-
-    void setXYZ(float xx, float yy, float zz) {
-        x = xx;
-        y = yy;
-        z = zz;
-    }
 };
-
 
 #endif //OPENGLGAME_GL2DSLIDER_H
