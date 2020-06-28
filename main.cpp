@@ -51,22 +51,6 @@ std::vector<float> vSpeed(10);
 
 // 总任务配置区
 void initGhd() {
-//    // 添加框，即缓冲区，为了显示好看，尽量奇数
-//    // 缓冲区标号、大小，缓冲区摆放位置
-//    ghd.push_back(new bufferObj(new ItemRepository(1, 9), -10 * zoom, 0, 0));
-//    ghd.push_back(new bufferObj(new ItemRepository(2, 3), 10 * zoom, 7 * zoom, 0));
-//    ghd.push_back(new bufferObj(new ItemRepository(3, 3), 10 * zoom, 0 * zoom, 0));
-//    ghd.push_back(new bufferObj(new ItemRepository(4, 3), 10 * zoom, -7 * zoom, 0));
-//    // 任务，即启动箭头任务
-//    // 任务名、输入缓冲区，输出缓冲区，速度
-//    vt.push_back(new std::thread(putTask, nullptr, ghd[0]->ir, &vSpeed[0]));
-//    vt.push_back(new std::thread(moveTask, ghd[0]->ir, ghd[1]->ir, &vSpeed[1]));
-//    vt.push_back(new std::thread(moveTask, ghd[0]->ir, ghd[2]->ir, &vSpeed[2]));
-//    vt.push_back(new std::thread(moveTask, ghd[0]->ir, ghd[3]->ir, &vSpeed[3]));
-//    vt.push_back(new std::thread(getTask, ghd[1]->ir, nullptr, &vSpeed[4]));
-//    vt.push_back(new std::thread(getTask, ghd[2]->ir, nullptr, &vSpeed[5]));
-//    vt.push_back(new std::thread(getTask, ghd[3]->ir, nullptr, &vSpeed[6]));
-//    for (auto &item:vt) item->detach();
     // 添加框，即缓冲区，为了显示好看，尽量奇数
     // 缓冲区标号、大小，缓冲区摆放位置
     ghd.push_back(new bufferObj(new ItemRepository(1, 9), -10 * zoom, 0, 0));
@@ -81,13 +65,14 @@ void initGhd() {
     vt.push_back(new std::thread(getTask, ghd[2]->ir, nullptr, &vSpeed[4]));
     for (auto &item:vt) item->detach();
 
-    vecSlider.emplace_back(-1.5, 1.5, 50, 0, 100);
-    vecSlider.emplace_back(0, 1.6, 50, 0, 100);
-    vecSlider.emplace_back(0, 1.4, 50, 0, 100);
-    vecSlider.emplace_back(1.5, 1.6, 50, 0, 100);
-    vecSlider.emplace_back(1.5, 1.4, 50, 0, 100);
+    vecSlider.emplace_back(-1.5, 1.5, 50, 1, 100);
+    vecSlider.emplace_back(0, 1.6, 50, 1, 100);
+    vecSlider.emplace_back(0, 1.4, 50, 1, 100);
+    vecSlider.emplace_back(1.5, 1.6, 50, 1, 100);
+    vecSlider.emplace_back(1.5, 1.4, 50, 1, 100);
 
     for (int i = 0; i < vecSlider.size(); i++) {
+        // 延时时间 = （100.0 / 滑动条的值）* 100 ms
         vSpeed[i] = (100.0 / vecSlider[i].getVal() * 100);
     }
 }
